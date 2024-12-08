@@ -94,3 +94,15 @@ def comment_remove(request, pk):
     post_pk = comment.post.pk
     comment.delete()
     return redirect('post_detail', pk=post_pk)
+
+##################################
+## New Protected View for Tests ##
+##################################
+
+@login_required
+def protected_view(request):
+    """
+    This view is used for testing session expiration.
+    It requires the user to be logged in.
+    """
+    return render(request, 'blog/protected_view.html', {"message": "This is a protected view"})
