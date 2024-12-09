@@ -87,52 +87,53 @@ class SessionSecurityTests(TestCase):
     
     def test_session_expiration(self):
        
-        self.client.login(username='testuser', password='testpass123')
+        self.test_client.login(username='testuser', password='testpass123')
 
         
-        response = self.client.get('/protected/')
-        self.assertEqual(response.status_code, 200, "Initial protected view access should succeed")
+        response_to_protected_view = self.test_client.get('/protected/')
+        self.assertEqual(response_to_protected_view.status_code, 200, "Initial access to the protected view should succeed")
 
         # Manually expire the session
-        session = self.client.session
-        session.set_expiry(0)  # Expire at browser close
-        session.save()
+        active_session = self.test_client.session
+        active_session.set_expiry(0)  # Expire at browser close
+        active_session.save()
 
         # Clear any existing authentication
         from django.contrib.auth import logout
-        logout(self.client)
+        logout(self.test_client)
 
         
-        response = self.client.get('/protected/')
+        response_after_logout = self.test_client.get('/protected/')
 
-    
-        self.assertRedirects(response, '/accounts/login/?next=/protected/')
+        self.assertRedirects(response_after_logout, '/accounts/login/?next=/protected/')
+
     
     def test_session_expiration_failure(self):
         """Failing test: Session does not expire due to missing expiration logic."""
-        # Log in the user
-        self.client.login(username='testuser', password='testpass123')
+        # Log in the mock user
+        self.test_client.login(username='testuser', password='testpass123')
 
         # Access the protected view to confirm the user is logged in
-        response = self.client.get('/protected/')
-        self.assertEqual(response.status_code, 200, "Initial protected view access should succeed")
+        protected_view_response = self.test_client.get('/protected/')
+        self.assertEqual(protected_view_response.status_code, 200, "Initial access to the protected view should succeed")
 
-        # Simulate an architecture breaker: Disable session expiration
-        session = self.client.session
-        session.set_expiry(None)  # Disable expiration entirely
-        session.save()
+        # Simulate an architectural flaw: Disable session expiration
+        user_session = self.test_client.session
+        user_session.set_expiry(None)  # Disable expiration entirely
+        user_session.save()
 
         # Attempt to access the protected view after "expiration"
-        response = self.client.get('/protected/')
+        post_expiration_response = self.test_client.get('/protected/')
 
-        # Intentionally fail the test to demonstrate the architectural breaker
-        if response.status_code == 200:
+        # Intentionally fail the test to demonstrate the architectural flaw
+        if post_expiration_response.status_code == 200:
             raise AssertionError(
                 "Test failed intentionally: Session expiration logic is missing. "
-                "This demonstrates the architectural breaker for session expiration."
+                "This demonstrates the architectural flaw for session expiration."
             )
         else:
-            self.assertRedirects(response, '/accounts/login/?next=/protected/')
+            self.assertRedirects(post_expiration_response, '/accounts/login/?next=/protected/')
+
 
 
 
