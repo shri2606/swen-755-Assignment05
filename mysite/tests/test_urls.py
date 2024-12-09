@@ -74,65 +74,56 @@ class SessionSecurityTests(TestCase):
             username='testuser',
             password='testpass123'
         )
-
-    # def test_proper_logout_handling(self): #passing test case - demonstrates proper logout handling
-    #     self.client.login(username='testuser', password='testpass123')
-    #     response = self.client.post('/accounts/logout/')
-    #     self.assertEqual(response.status_code, 302) #passsing test case
-
-    # def test_improper_logout_handling(self): #Failing test- demonstrates improper logout handling
-    #     self.client.login(username='testuser', password='testpass123')
-    #     response = self.client.get('/accounts/logout/')  # Using GET instead of POST
-    #     self.assertEqual(response.status_code, 302)  # This will fail
     
     def test_session_expiration(self):
        
-        self.test_client.login(username='testuser', password='testpass123')
+        self.client.login(username='testuser', password='testpass123')
 
         
-        response_to_protected_view = self.test_client.get('/protected/')
-        self.assertEqual(response_to_protected_view.status_code, 200, "Initial access to the protected view should succeed")
+        response = self.client.get('/protected/')
+        self.assertEqual(response.status_code, 200, "Initial protected view access should succeed")
 
         # Manually expire the session
-        active_session = self.test_client.session
-        active_session.set_expiry(0)  # Expire at browser close
-        active_session.save()
+        session = self.client.session
+        session.set_expiry(0)  # Expire at browser close
+        session.save()
 
         # Clear any existing authentication
         from django.contrib.auth import logout
-        logout(self.test_client)
+        logout(self.client)
 
         
-        response_after_logout = self.test_client.get('/protected/')
+        response = self.client.get('/protected/')
 
-        self.assertRedirects(response_after_logout, '/accounts/login/?next=/protected/')
-
+    
+        self.assertRedirects(response, '/accounts/login/?next=/protected/')
     
     def test_session_expiration_failure(self):
         """Failing test: Session does not expire due to missing expiration logic."""
-        # Log in the mock user
-        self.test_client.login(username='testuser', password='testpass123')
+        # Log in the user
+        self.client.login(username='testuser', password='testpass123')
 
         # Access the protected view to confirm the user is logged in
-        protected_view_response = self.test_client.get('/protected/')
-        self.assertEqual(protected_view_response.status_code, 200, "Initial access to the protected view should succeed")
+        response = self.client.get('/protected/')
+        self.assertEqual(response.status_code, 200, "Initial protected view access should succeed")
 
-        # Simulate an architectural flaw: Disable session expiration
-        user_session = self.test_client.session
-        user_session.set_expiry(None)  # Disable expiration entirely
-        user_session.save()
+        # Simulate an architecture breaker: Disable session expiration
+        session = self.client.session
+        session.set_expiry(None)  # Disable expiration entirely
+        session.save()
 
         # Attempt to access the protected view after "expiration"
-        post_expiration_response = self.test_client.get('/protected/')
+        response = self.client.get('/protected/')
 
-        # Intentionally fail the test to demonstrate the architectural flaw
-        if post_expiration_response.status_code == 200:
+        # Intentionally fail the test to demonstrate the architectural breaker
+        if response.status_code == 200:
             raise AssertionError(
                 "Test failed intentionally: Session expiration logic is missing. "
-                "This demonstrates the architectural flaw for session expiration."
+                "This demonstrates the architectural breaker for session expiration."
             )
         else:
-            self.assertRedirects(post_expiration_response, '/accounts/login/?next=/protected/')
+            self.assertRedirects(response, '/accounts/login/?next=/protected/')
+
 
 
 
